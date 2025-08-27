@@ -117,3 +117,27 @@ func TestSParser_NullBulk_TODO(t *testing.T) {
 	t.Skip("Decide representation for $-1 (null bulk). Currently unsupported.")
 	_, _ = SParser([]byte("$-1\r\n"))
 }
+
+func FuzzSParser_NoPanic(f *testing.F) {
+	// Seeds: a few valid/invalid forms
+	seeds := [][]byte{
+		[]byte("+OK\r\n"),
+		[]byte("$0\r\n\r\n"),
+		[]byte("$3\r\nabc\r\n"),
+		[]byte("$-1\r\n"),
+		[]byte("PING\r\n"),
+		[]byte(""),
+	}
+	for _, s := range seeds {
+		f.Add(string(s))
+	}
+
+	f.Fuzz(func(t *testing.T, s string) {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("panic on input %q: %v", s, r)
+			}
+		}()
+		_, _ = SParser([]byte(s))
+	})
+}
