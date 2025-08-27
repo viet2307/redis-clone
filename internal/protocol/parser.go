@@ -8,6 +8,7 @@ import (
 
 const CRLF string = "\r\n"
 
+// {"bulk_noLen", []byte("$\r\nHello\r\n")},
 func bulkParser(body []byte) (string, error) {
 	i := 1
 	for i < len(body) && body[i] != '\r' {
@@ -16,12 +17,21 @@ func bulkParser(body []byte) (string, error) {
 	if i >= len(body) {
 		return "", fmt.Errorf("invalid format, input don't have proper CRLF")
 	}
+	if i == 1 {
+		return "", fmt.Errorf("invalid format, input don't have body length")
+	}
 	r := bytes.Runes(body[1:i])
+
 	lenn, err := strconv.Atoi(string(r))
+	if lenn == 0 {
+		return "", nil
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("invalid format, input don't have proper CRLF for length of string\n%v", err)
 	}
-	if i+lenn+2 >= len(r) {
+
+	if i+lenn+2 >= len(body) {
 		return "", fmt.Errorf("invalid format, input len is out of bound")
 	}
 	r = bytes.Runes(body[i+2 : i+2+lenn])
