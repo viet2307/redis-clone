@@ -1,43 +1,10 @@
-package protocol
+package protocol_test
 
-import "testing"
+import (
+	"testing"
 
-/*
-Simple String: +<text>\r\n → returns <text>.
-Bulk String: $<n>\r\n<payload>\r\n, where n is bytes, payload length exactly n.
-Errors when:
-  - starts with neither + nor $
-  - malformed CRLF in length line
-  - non-numeric length
-  - payload length ≠ n
-  - missing trailing \r\n
-Safety: function must not panic on junk/short inputs (right now it will on some)
-We’ll write tests that expose those panics so you can fix them.
-*/
-
-func mustNoErr(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func mustErr(t *testing.T, err error) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("expected error, got nil")
-	}
-}
-
-func mustPanic(t *testing.T, f func()) {
-	t.Helper()
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("expected panic, but did not panic")
-		}
-	}()
-	f()
-}
+	"tcp-server.com/m/internal/protocol"
+)
 
 func TestParser_OK(t *testing.T) {
 	t.Parallel()
@@ -58,10 +25,10 @@ func TestParser_OK(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := SParser(tc.in)
+			got, pos, err := protocol.SParser(tc.in, 0)
 			mustNoErr(t, err)
 			if got != tc.want {
-				t.Fatalf("got %q, want %q", got, tc.want)
+				t.Fatalf("got %q, pos: %d, want %q", got, pos, tc.want)
 			}
 		})
 	}
@@ -78,13 +45,14 @@ func TestParser_Err(t *testing.T) {
 		{"simple_invalidCRLF", []byte("+")},
 		{"bulk_noLen", []byte("$\r\nHello\r\n")},
 		{"bulk_noBody", []byte("$5\r\n\r\n")},
-		{"bulk_invalidLen", []byte("$7\r\nHello\r\n")},
+		{"bulk_invalid_len", []byte("$7\r\nHello\r\n")},
+		{"bulk_null", []byte("$-1\r\n\r\n")},
 	}
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := SParser(tc.in)
+			_, _, err := protocol.SParser(tc.in, 0)
 			mustErr(t, err)
 		})
 	}
@@ -107,7 +75,7 @@ func TestSParser_Panics_Today_But_Should_Be_Errors(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := SParser(tc.in)
+			_, _, err := protocol.SParser(tc.in, 0)
 			mustErr(t, err)
 		})
 	}
@@ -115,7 +83,7 @@ func TestSParser_Panics_Today_But_Should_Be_Errors(t *testing.T) {
 
 func TestSParser_NullBulk_TODO(t *testing.T) {
 	t.Skip("Decide representation for $-1 (null bulk). Currently unsupported.")
-	_, _ = SParser([]byte("$-1\r\n"))
+	_, _, _ = protocol.SParser([]byte("$-1\r\n"), 0)
 }
 
 func FuzzSParser_NoPanic(f *testing.F) {
@@ -138,6 +106,6 @@ func FuzzSParser_NoPanic(f *testing.F) {
 				t.Fatalf("panic on input %q: %v", s, r)
 			}
 		}()
-		_, _ = SParser([]byte(s))
+		_, _, _ = protocol.SParser([]byte(s), 0)
 	})
 }

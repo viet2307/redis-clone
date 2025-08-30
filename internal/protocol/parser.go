@@ -1,70 +1,141 @@
 package protocol
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
 )
 
-const CRLF string = "\r\n"
-
-// {"bulk_noLen", []byte("$\r\nHello\r\n")},
-func bulkParser(body []byte) (string, error) {
-	i := 1
-	for i < len(body) && body[i] != '\r' {
-		i++
+func BstringParser(body []byte, pos int) (string, int, error) {
+	if pos > len(body) {
+		return "", -1, fmt.Errorf("invalid input\nbody: %s, pos: %d", body, pos)
 	}
-	if i >= len(body) {
-		return "", fmt.Errorf("invalid format, input don't have proper CRLF")
+	pos++
+	npos := pos
+	for npos < len(body) && body[npos] != '\r' {
+		npos++
 	}
-	if i == 1 {
-		return "", fmt.Errorf("invalid format, input don't have body length")
-	}
-	r := bytes.Runes(body[1:i])
-
-	lenn, err := strconv.Atoi(string(r))
-	if lenn == 0 {
-		return "", nil
-	}
-
+	size, err := strconv.Atoi(string(body[pos:npos]))
 	if err != nil {
-		return "", fmt.Errorf("invalid format, input don't have proper CRLF for length of string\n%v", err)
+		return "", -1, fmt.Errorf("could not get size of body %s, start at %d and end at %d\n%q", body, pos, npos, err)
 	}
-
-	if i+lenn+2 >= len(body) {
-		return "", fmt.Errorf("invalid format, input len is out of bound")
+	if size < 0 {
+		return "", -1, fmt.Errorf("input have negetive body size %d", size)
 	}
-	r = bytes.Runes(body[i+2 : i+2+lenn])
-	return string(r), nil
-}
-
-func SParser(body []byte) (string, error) {
-	// Simple string `+<text>\r\n`
-	if len(body) <= 0 {
-		return "", fmt.Errorf("empty input")
-	}
-	if body[0] == '+' {
-		i := 1
-		for i < len(body) && body[i] != '\r' {
-			i++
+	npos += 2
+	pos = npos
+	for size > 0 {
+		if npos+size >= len(body) || body[npos] == '\r' || body[npos] == '\n' {
+			return "", -1, fmt.Errorf("invalid size of body %s, got size %d from pos %d", body, npos, err)
 		}
-		if i >= len(body) {
-			return "", fmt.Errorf("invalid format, input don't have proper CRLF")
+		npos++
+		size--
+	}
+	return string(body[pos:npos]), npos + 2, nil
+}
+
+func SParser(body []byte, pos int) (string, int, error) {
+	if pos >= len(body) {
+		return "", -1, fmt.Errorf("invalid input\nbody: %s, pos: %d", body, pos)
+	}
+	if body[pos] == '+' {
+		pos++
+		npos := pos
+		for npos < len(body) && body[npos] != '\r' {
+			npos++
 		}
-		return string(body[1:i]), nil
+		if npos >= len(body) {
+			return "", -1, fmt.Errorf("input don't have proper CRLF, %s", body)
+		}
+		return string(body[pos:npos]), npos + 2, nil
 	}
-
-	if body[0] != '$' {
-		return "", fmt.Errorf("invalid input, input not of type SIMPLE_STRING or BULK_STRING")
+	if body[pos] != '$' {
+		return "", -1, fmt.Errorf("input not of type SIMPLE_STRING or BULK_STRING\nbody: %s, pos: %d", body, pos)
 	}
-	// Bulk string `$<len>\r\n<text>\r\n`
-	return bulkParser(body)
+	return BstringParser(body, pos)
 }
 
-func IntParser(body []byte) (int64, error) {
-	return 0, nil
+func IntParser(body []byte, pos int) (int64, int, error) {
+	if body[pos] != ':' {
+		return 0, -1, fmt.Errorf("input not of type INT, body %s,pos %d", body, pos)
+	}
+	pos++
+	npos := pos
+	for npos < len(body) && body[npos] != '\r' {
+		npos++
+	}
+	if npos >= len(body) {
+		return 0, -1, fmt.Errorf("input do not have proper CRLF, body %s, pos %d", body, pos)
+	}
+	res, err := strconv.ParseInt(string(body[pos:npos]), 10, 64)
+	fmt.Printf("body %d to INT64, pos1 %d pos2 %d", res, pos, npos)
+	if err != nil {
+		return 0, -1, fmt.Errorf("error convert body %s to INT64, pos %d\n%q", body, pos, err)
+	}
+	pos = npos + 2
+	return res, pos, nil
 }
 
-func ArrParser(body string) (interface{}, error) {
-	return 0, nil
+func ArrParser(body []byte, pos int) ([]interface{}, int, error) {
+	if len(body) == 0 || pos >= len(body) {
+		return nil, -1, fmt.Errorf("empty input")
+	}
+
+	if body[pos] != '*' {
+		return nil, -1, fmt.Errorf("input not of type ARRAY, %s", body)
+	}
+
+	idx := pos
+	for idx < len(body) && body[idx] != '\r' {
+		idx++
+	}
+	count, err := strconv.Atoi(string(body[pos+1 : idx]))
+	if err != nil {
+		return nil, -1, fmt.Errorf("could not read length of input, %s\n%v", body, err)
+	}
+	idx += 2
+	if idx > len(body) {
+		return nil, -1, fmt.Errorf("out of bound at pos: %d for body: %s", idx, body)
+	}
+
+	res := make([]interface{}, 0, count)
+	i := count
+	for idx < len(body) && i > 0 {
+		switch body[idx] {
+		case '+':
+			read, npos, err := SParser(body, idx)
+			if err != nil {
+				return nil, -1, err
+			}
+			res = append(res, read)
+			idx = npos
+		case '$':
+			read, npos, err := SParser(body, idx)
+			if err != nil {
+				return nil, -1, err
+			}
+			res = append(res, read)
+			idx = npos
+		case ':':
+			read, npos, err := IntParser(body, idx)
+			if err != nil {
+				return nil, -1, err
+			}
+			res = append(res, read)
+			idx = npos
+		case '*':
+			read, npos, err := ArrParser(body, idx)
+			if err != nil {
+				return nil, -1, err
+			}
+			idx = npos
+			res = append(res, read)
+		default:
+			return nil, -1, fmt.Errorf("invalid input: %q\nAt pos: %d, parts %s", body, idx, body[idx:])
+		}
+		i--
+	}
+	if i > 0 {
+		return nil, -1, fmt.Errorf("invalid input, expected %d of elements in ARRAY but got %d", count, len(res))
+	}
+	return res, idx, nil
 }
