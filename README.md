@@ -20,7 +20,7 @@ Review my own knowledge on the concepts of:
     - [x] Array parser
     - [x] Parser tests
 - [ ] Redis commands implementation:
-    - [ ] PING
+    - [x] PING
     - [ ] GET
     - [ ] SET
 - [ ] Sorted-set implementation
@@ -214,14 +214,21 @@ Based on [redis official documentation](https://redis.io/docs/latest/commands/),
 
 ## 🚀 Getting Started
 
+- Clone and run:
 ```bash
-# Clone and run
 git clone git@github.com:viet2307/redis-clone.git
 cd redis-clone
 go run cmd/tcp-server/main.go
 
-# Test with redis-cli
-redis-cli -p 6379
+```
+
+- Test with redis-cli:
+```bash
+git clone https://github.com/redis/redis.git
+cd redis
+git checkout 6.2
+make
+./src/redis-cli -p 6739
 ```
 
 ## 📚 References
