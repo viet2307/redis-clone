@@ -75,6 +75,21 @@ func IntParser(body []byte, pos int) (int64, int, error) {
 	return res, pos, nil
 }
 
+func ErrorParser(body []byte, pos int) (string, int, error) {
+	if len(body) == 0 {
+		return "", -1, fmt.Errorf("empty input")
+	}
+	if body[pos] != '-' {
+		return "", -1, fmt.Errorf("input not of type ERROR, body %s, pos %d", body, pos)
+	}
+	pos++
+	end := pos
+	for body[end] != '\r' {
+		end++
+	}
+	return string(body[pos:end]), end + 2, nil
+}
+
 func ArrParser(body []byte, pos int) ([]interface{}, int, error) {
 	if len(body) == 0 || pos >= len(body) {
 		return nil, -1, fmt.Errorf("empty input")
@@ -129,6 +144,13 @@ func ArrParser(body []byte, pos int) ([]interface{}, int, error) {
 			}
 			idx = npos
 			res = append(res, read)
+		case '-':
+			read, npos, err := ErrorParser(body, idx)
+			if err != nil {
+				return nil, -1, err
+			}
+			res = append(res, read)
+			idx = npos
 		default:
 			return nil, -1, fmt.Errorf("invalid input: %q\nAt pos: %d, parts %s", body, idx, body[idx:])
 		}
