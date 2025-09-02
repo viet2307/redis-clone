@@ -38,31 +38,31 @@
 ### TCP server from scratch
 - Request response model
 
-![client-server](assets\client_server.png)
+![client-server](assets/client_server.png)
 
 - There are some choices for multi-threading connection:
 
-![Thread per connection model](assets\client-server.png)
+![Thread per connection model](assets/client-server.png)
 
     - Thread per connection model:
         - Pros: simple to implement, leverages multi-core processor, handle blocking I/O
         - Cons: high memory and cpu overhead, risk of race condition
 
-![Thread pool](assets\thread-pool.png)
+![Thread pool](assets/thread-pool.png)
     
     - Thread pool:
         - Pros: avoid overload harware
         - Cons: hard to configure/choose pool size, high overhead for very short task, more complex and risk of race condition
 
-![Event driven](assets\event-driven.png)
+![Event driven](assets/event-driven.png)
 
     - Event driven:
         - Pros: scalable for I/O bound app, efficient resource usage (no context switch overhead), reduce race condition
         - Cons: complex, CPU-Bound operations block everything
 
 - For simplicity's sake, we will implement thread pool with graceful shutdown TCP server
-    - [web-server](internal\server\server.go)
-    - [threadpool](threadpool\pool.go)
+    - [web-server](internal/server/server.go)
+    - [threadpool](threadpool/pool.go)
 
 
 ### RESP Protocols:
@@ -79,18 +79,18 @@
         - -Error message\r\n
     - [Array](https://redis.io/docs/latest/develop/reference/protocol-spec/#arrays) - support both nested array and mixed type array with []interface{}, encoded as (*) and followed by the number of elements, then a CRLF then the body is a combination of various encoded, supported datatypes
         - *< number-of-elements >\r\n< element-1 >...< element-n >
-- Test for protocol parser is inside module [test](.\internal\protocol\test)
+- Test for protocol parser is inside module [test](./internal/protocol/test)
 
 ### Redis Commands
 - [Based on redis official documentations](https://redis.io/docs/latest/commands/) there currently are a lot of commands
 - This repository only support simple PING, GET, SET commands
 - RESP recall flows:
 
-![RESP-recall](assets\RESP-recall.png)
+![RESP-recall](assets/RESP-recall.png)
 
 - Command logic flow:
 
-![Command-flow](assets\command-flow.png)
+![Command-flow](assets/command-flow.png)
 
 ### OS
 - [Basic OS knowledges](https://pages.cs.wisc.edu/~remzi/OSTEP/#:~:text=free%20online%20form%20of%20the%20book):
