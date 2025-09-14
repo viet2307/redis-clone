@@ -5,6 +5,34 @@ import (
 	"strconv"
 )
 
+type Command struct {
+	Cmd  string
+	Args []string
+}
+
+func CmdParser(body []byte) (Command, error) {
+	if len(body) == 0 {
+		return Command{}, fmt.Errorf("empty input")
+	}
+	cmd := ""
+	idx := 0
+	args := make([]string, 0)
+	for i, c := range body {
+		if c == ' ' && cmd == "" {
+			cmd = string(body)[0:i]
+			idx = i + 1
+		} else {
+			val := string(body)[idx:i]
+			args = append(args, val)
+			idx = i + 1
+		}
+	}
+	return Command{
+		Cmd:  cmd,
+		Args: args,
+	}, nil
+}
+
 func BstringParser(body []byte, pos int) (string, int, error) {
 	if pos > len(body) {
 		return "", -1, fmt.Errorf("invalid input\nbody: %s, pos: %d", body, pos)
