@@ -2,8 +2,6 @@ package protocol_test
 
 import (
 	"testing"
-
-	"tcp-server.com/m/internal/protocol"
 )
 
 func TestParser_OK(t *testing.T) {
@@ -20,12 +18,12 @@ func TestParser_OK(t *testing.T) {
 		// Unicode: "😊" is 4 bytes in UTF-8; length must be 4
 		{"bulk_unicode", []byte("$4\r\n😊\r\n"), "😊"},
 	}
-
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got, pos, err := protocol.SParser(tc.in, 0)
+
+			got, pos, err := p.DecodeOne(tc.in, 0)
 			mustNoErr(t, err)
 			if got != tc.want {
 				t.Fatalf("got %q, pos: %d, want %q", got, pos, tc.want)
@@ -52,7 +50,7 @@ func TestParser_Err(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, _, err := protocol.SParser(tc.in, 0)
+			_, err := p.Parse(tc.in)
 			mustErr(t, err)
 		})
 	}
@@ -75,7 +73,7 @@ func TestSParser_Panics_Today_But_Should_Be_Errors(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, _, err := protocol.SParser(tc.in, 0)
+			_, err := p.Parse(tc.in)
 			mustErr(t, err)
 		})
 	}
@@ -83,7 +81,7 @@ func TestSParser_Panics_Today_But_Should_Be_Errors(t *testing.T) {
 
 func TestSParser_NullBulk_TODO(t *testing.T) {
 	t.Skip("Decide representation for $-1 (null bulk). Currently unsupported.")
-	_, _, _ = protocol.SParser([]byte("$-1\r\n"), 0)
+	_, _ = p.Parse([]byte("$-1\r\n"))
 }
 
 func FuzzSParser_NoPanic(f *testing.F) {
@@ -106,6 +104,6 @@ func FuzzSParser_NoPanic(f *testing.F) {
 				t.Fatalf("panic on input %q: %v", s, r)
 			}
 		}()
-		_, _, _ = protocol.SParser([]byte(s), 0)
+		_, _ = p.Parse([]byte(s))
 	})
 }

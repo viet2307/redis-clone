@@ -2,8 +2,6 @@ package protocol_test
 
 import (
 	"testing"
-
-	"tcp-server.com/m/internal/protocol"
 )
 
 func TestParserInt_OK(t *testing.T) {
@@ -22,10 +20,10 @@ func TestParserInt_OK(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got, pos, err := protocol.IntParser(tc.in, 0)
+			got, err := p.Parse(tc.in)
 			mustNoErr(t, err)
 			if got != tc.want {
-				t.Fatalf("got %d, pos: %d, want %d", got, pos, tc.want)
+				t.Fatalf("got %d, want %d", got, tc.want)
 			}
 		})
 	}
@@ -48,7 +46,7 @@ func TestIntParser_Err(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, _, err := protocol.IntParser(tc.in, 0)
+			_, err := p.Parse(tc.in)
 			mustErr(t, err)
 		})
 	}

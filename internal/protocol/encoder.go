@@ -5,17 +5,19 @@ import (
 	"fmt"
 )
 
+type Encoder struct{}
+
 var CRLF = "\r\n"
 
-func encodeStringArray(sa []string) []byte {
+func (e *Encoder) encodeStringArray(sa []string) []byte {
 	res := []byte(fmt.Sprintf("*%d%s", len(sa), CRLF))
 	for _, s := range sa {
-		res = append(res, Encoder(s, false)...)
+		res = append(res, e.Encode(s, false)...)
 	}
 	return res
 }
 
-func Encoder(value interface{}, isSimpleString bool) []byte {
+func (e *Encoder) Encode(value interface{}, isSimpleString bool) []byte {
 	switch v := value.(type) {
 	case string:
 		if isSimpleString {
@@ -27,12 +29,12 @@ func Encoder(value interface{}, isSimpleString bool) []byte {
 	case error:
 		return []byte(fmt.Sprintf("-%s%s", v, CRLF))
 	case []string:
-		return encodeStringArray(value.([]string))
+		return e.encodeStringArray(value.([]string))
 	case [][]string:
 		var b []byte
 		buf := bytes.NewBuffer(b)
 		for _, sa := range value.([][]string) {
-			buf.Write(encodeStringArray(sa))
+			buf.Write(e.encodeStringArray(sa))
 		}
 		return []byte(fmt.Sprintf("*%d%s%s", len(value.([][]string)), CRLF, buf.Bytes()))
 	default:

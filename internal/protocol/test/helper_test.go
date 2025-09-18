@@ -1,6 +1,12 @@
 package protocol_test
 
-import "testing"
+import (
+	"testing"
+
+	"tcp-server.com/m/internal/protocol"
+)
+
+var p = protocol.REPSParser{}
 
 func mustNoErr(t *testing.T, err error) {
 	t.Helper()

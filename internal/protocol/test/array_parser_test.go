@@ -3,8 +3,6 @@ package protocol_test
 import (
 	"reflect"
 	"testing"
-
-	"tcp-server.com/m/internal/protocol"
 )
 
 func TestArrayParser_OK(t *testing.T) {
@@ -31,7 +29,7 @@ func TestArrayParser_OK(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got, _, err := protocol.ArrParser(tc.in, 0)
+			got, err := p.Parse(tc.in)
 			mustNoErr(t, err)
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("got %v, want %v", got, tc.want)
