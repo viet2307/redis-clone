@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-
-	"tcp-server.com/m/internal/protocol"
 )
 
 type Handler struct {
@@ -18,7 +16,7 @@ func NewHandler(conn net.Conn) *Handler {
 	}
 }
 
-func (h *Handler) HandleConnection() {
+func (h *Handler) HandleConnection(s *Server) {
 	defer func() {
 		_ = h.conn.Close()
 		log.Printf("Client disconnected: %s\n", h.conn.RemoteAddr().String())
@@ -39,10 +37,10 @@ func (h *Handler) HandleConnection() {
 		fmt.Fprintf(h.conn, "Goodbye!!!")
 		return
 	}
-	command := protocol.Command{}
+	command := Command{}
 	cmd, err := command.CmdParser(buf)
 	if err != nil {
 		fmt.Fprintf(h.conn, "%s", err)
 	}
-	h.conn.Write(cmd.Execute())
+	h.conn.Write(cmd.Execute(s))
 }
