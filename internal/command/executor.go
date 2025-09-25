@@ -1,4 +1,4 @@
-package server
+package command
 
 import (
 	"errors"
@@ -7,8 +7,57 @@ import (
 	"strings"
 	"time"
 
+	"tcp-server.com/m/internal/datastructure"
 	"tcp-server.com/m/internal/protocol"
 )
+
+type Executor struct {
+	store *datastructure.Storage
+}
+
+type Command struct {
+	Name string
+	Args []string
+}
+
+func NewExecutor(store *datastructure.Storage) *Executor {
+	return &Executor{
+		store: store,
+	}
+}
+
+func (e *Executor) CmdParser(data []byte) (*Command, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty input")
+	}
+
+	in := strings.TrimSpace(string(data))
+	cmd, idx := "", 0
+	args := make([]string, 0)
+
+	for i, c := range in {
+		if c == ' ' && cmd == "" {
+			cmd = strings.ToUpper(in[0:i])
+			idx = i + 1
+			break
+		}
+	}
+
+	for i := idx; i < len(in); i++ {
+		c := in[i]
+		if c == ' ' {
+			val := strings.ToUpper(in[idx:i])
+			args = append(args, val)
+			idx = i + 1
+		}
+	}
+
+	args = append(args, strings.ToUpper(in[idx:]))
+	return &Command{
+		Name: cmd,
+		Args: args,
+	}, nil
+}
 
 const (
 	CmdPing   = "PING"
@@ -20,57 +69,29 @@ const (
 	CmdExpire = "EXPIRE"
 )
 
-type Command struct {
-	Cmd  string
-	Args []string
-}
-
-func (c *Command) CmdParser(data []byte) (Command, error) {
-	if len(data) == 0 {
-		return Command{}, fmt.Errorf("empty input")
-	}
-	cmd := ""
-	idx := 0
-	args := make([]string, 0)
-	for i, c := range data {
-		if c == ' ' && cmd == "" {
-			cmd = strings.ToLower(string(data)[0:i])
-			idx = i + 1
-		} else {
-			val := strings.ToLower(string(data)[idx:i])
-			args = append(args, val)
-			idx = i + 1
-		}
-	}
-	return Command{
-		Cmd:  cmd,
-		Args: args,
-	}, nil
-}
-
-func (c *Command) Execute(s *Server) []byte {
+func (e *Executor) Execute(cmd *Command) []byte {
 	en := protocol.Encoder{}
-	switch c.Cmd {
+	switch cmd.Name {
 	case CmdPing:
-		return cmdPING(c.Args)
+		return e.cmdPING(cmd.Args)
 	case CmdSet:
-		return cmdSET(s, c.Args)
+		return e.cmdSET(cmd.Args)
 	case CmdGet:
-		return cmdGET(s, c.Args)
+		return e.cmdGET(cmd.Args)
 	case CmdTtl:
-		return cmdTTL(s, c.Args)
+		return e.cmdTTL(cmd.Args)
 	case CmdExpire:
-		return cmdExpr(s, c.Args)
+		return e.cmdExpr(cmd.Args)
 	case CmdExist:
-		return cmdExist(s, c.Args)
+		return e.cmdExist(cmd.Args)
 	case CmdDel:
-		return cmdDel(s, c.Args)
+		return e.cmdDel(cmd.Args)
 	default:
 		return en.Encode(errors.New("ERR unsupported CMD detected"), false)
 	}
 }
 
-func cmdPING(args []string) []byte {
+func (e *Executor) cmdPING(args []string) []byte {
 	var res []byte
 	en := protocol.Encoder{}
 	if len(args) > 1 {
@@ -84,7 +105,7 @@ func cmdPING(args []string) []byte {
 	return res
 }
 
-func cmdSET(s *Server, args []string) []byte {
+func (e *Executor) cmdSET(args []string) []byte {
 	en := protocol.Encoder{}
 	if len(args) < 2 {
 		return en.Encode(errors.New("ERR wrong number of arguments for 'set' command"), false)
@@ -96,37 +117,37 @@ func cmdSET(s *Server, args []string) []byte {
 		ttl = uint64(parsed)
 	}
 	expr := ttl + uint64(time.Now().UnixMilli())
-	s.Set(key, val, expr)
+	e.store.Set(key, val, expr)
 	return en.Encode("OK", true)
 }
 
-func cmdGET(s *Server, args []string) []byte {
+func (e *Executor) cmdGET(args []string) []byte {
 	en := protocol.Encoder{}
 	if len(args) > 1 || len(args) < 1 {
 		return en.Encode(errors.New("ERR wrong number of arguments for 'get' command"), false)
 	}
 	key := args[0]
-	obj, ok := s.Get(key)
+	obj, ok := e.store.Get(key)
 	if !ok {
 		return en.Encode(nil, false)
 	}
 	return en.Encode(obj.Value, false)
 }
 
-func cmdTTL(s *Server, args []string) []byte {
+func (e *Executor) cmdTTL(args []string) []byte {
 	en := protocol.Encoder{}
 	if len(args) != 1 {
 		return en.Encode(errors.New("ERR wrong number of arguments for 'TTL' command"), false)
 	}
 	key := args[0]
-	ttl, ok := s.Ttl(key)
+	ttl, ok := e.store.Ttl(key)
 	if !ok {
 		return en.Encode(nil, false)
 	}
 	return en.Encode(ttl, false)
 }
 
-func cmdExpr(s *Server, args []string) []byte {
+func (e *Executor) cmdExpr(args []string) []byte {
 	en := protocol.Encoder{}
 	if len(args) < 2 {
 		return en.Encode(errors.New("ERR wrong number of arguments for 'EXPIRE' command"), false)
@@ -134,26 +155,24 @@ func cmdExpr(s *Server, args []string) []byte {
 	key := args[0]
 	expr, _ := strconv.ParseUint(args[1], 10, 64)
 	expr += uint64(time.Now().UnixMilli())
-	res, _ := s.Expire(key, expr)
+	res, _ := e.store.Expire(key, expr)
 	return en.Encode(res, false)
 }
 
-func cmdDel(s *Server, args []string) []byte {
+func (e *Executor) cmdDel(args []string) []byte {
 	en := protocol.Encoder{}
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return en.Encode(errors.New("ERR wrong number of arguments for 'DEL' command"), false)
 	}
-	keys := args[1:]
-	res, _ := s.Del(keys)
+	res, _ := e.store.Del(args)
 	return en.Encode(res, false)
 }
 
-func cmdExist(s *Server, args []string) []byte {
+func (e *Executor) cmdExist(args []string) []byte {
 	en := protocol.Encoder{}
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return en.Encode(errors.New("ERR wrong number of arguments for 'EXIST' command"), false)
 	}
-	keys := args[1:]
-	res, _ := s.Exist(keys)
+	res, _ := e.store.Exist(args)
 	return en.Encode(res, false)
 }

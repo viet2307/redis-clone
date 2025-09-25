@@ -37,10 +37,9 @@ func (h *Handler) HandleConnection(s *Server) {
 		fmt.Fprintf(h.conn, "Goodbye!!!")
 		return
 	}
-	command := Command{}
-	cmd, err := command.CmdParser(buf)
+	cmd, err := s.executor.CmdParser(buf)
 	if err != nil {
 		fmt.Fprintf(h.conn, "%s", err)
 	}
-	h.conn.Write(cmd.Execute(s))
+	h.conn.Write(s.executor.Execute(cmd))
 }
