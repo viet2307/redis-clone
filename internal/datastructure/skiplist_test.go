@@ -43,7 +43,6 @@ func TestZrankDuplicateScores(t *testing.T) {
 	z.Zadd("monkey", 100.0)
 	z.Zadd("banana", 100.0)
 
-	// Should be ordered: apple, banana, monkey, zebra (all score 100)
 	tests := []struct {
 		ele  string
 		want int
@@ -56,10 +55,9 @@ func TestZrankDuplicateScores(t *testing.T) {
 
 	for _, tt := range tests {
 		rank, _ := z.Zrank(tt.ele)
-		// if rank != tt.want {
-		// 	t.Errorf("Zrank(%s) = %v, want %v", tt.ele, rank, tt.want)
-		// }
-		fmt.Printf("Zrank(%s) = %v, want %v\n", tt.ele, rank, tt.want)
+		if rank != tt.want {
+			t.Errorf("Zrank(%s) = %v, want %v", tt.ele, rank, tt.want)
+		}
 	}
 }
 
@@ -85,6 +83,7 @@ func TestZrankAfterScoreUpdate(t *testing.T) {
 		if rank != tt.want {
 			t.Errorf("After update: Zrank(%s) = %v, want %v", tt.ele, rank, tt.want)
 		}
+		fmt.Printf("After update: Zrank(%s) = %v, want %v\n", tt.ele, rank, tt.want)
 	}
 }
 

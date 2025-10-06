@@ -132,8 +132,8 @@ func (s *Skiplist) skiplistDel(node *SkiplistNode, backList []*SkiplistNode) {
 }
 
 func (z *ZSet) zsetDel(node *SkiplistNode, backList []*SkiplistNode) {
-	delete(z.dict, node.ele)
 	z.zskiplist.skiplistDel(node, backList)
+	delete(z.dict, node.ele)
 }
 
 func (s *Skiplist) skiplistAdd(ele string, score float64) {
@@ -148,37 +148,34 @@ func (s *Skiplist) skiplistAdd(ele string, score float64) {
 		s.level = h
 	}
 
+	node.backward = backList[0]
+
 	for i := 0; i < h; i++ {
 		next := backList[i].levels[i].forward
 		node.levels[i].forward = next
 		backList[i].levels[i].forward = node
 
-		switch i {
-		case 0:
-			oldSpan := backList[0].levels[0].span
-			backList[i].levels[i].span = 1
-			node.backward = backList[i]
-			if next != nil {
-				node.levels[i].span = oldSpan - 1
-				next.backward = node
-				continue
+		if next != nil {
+			if i == 0 {
+				backList[i].levels[i].span = 1
+				node.levels[i].span = 1
+			} else {
+				oldSpan := backList[i].levels[i].span
+				backList[i].levels[i].span = rank[i] - rank[0] + 1
+				node.levels[i].span = oldSpan - (rank[i] - rank[0])
 			}
-
+			next.backward = node
+		} else {
+			if i == 0 {
+				backList[i].levels[i].span = 1
+			} else {
+				backList[i].levels[i].span = rank[i] - rank[0] + 1
+			}
 			node.levels[i].span = 0
 			s.tail = node
-		default:
-			oldSpan := backList[i].levels[i].span
-			backList[i].levels[i].span = rank[i] - rank[0] + 1
-			node.backward = backList[0]
-			if next != nil {
-				node.levels[0].span = oldSpan - 1
-				next.backward = node
-			} else {
-				node.levels[0].span = 0
-				s.tail = node
-			}
 		}
 	}
+
 	for i := h; i < s.level; i++ {
 		backList[i].levels[i].span++
 	}
