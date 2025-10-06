@@ -2,6 +2,7 @@ package datastructure
 
 import (
 	"math/rand"
+	"strings"
 )
 
 type SkiplistNode struct {
@@ -29,9 +30,16 @@ type ZSet struct {
 	dict      map[string]float64
 }
 
+func NewZset() *ZSet {
+	return &ZSet{
+		zskiplist: NewSkiplist(32),
+		dict:      make(map[string]float64),
+	}
+}
+
 func NewSkiplist(maxLevel int) *Skiplist {
 	skiplistLevel := make([]SkiplistLevel, maxLevel)
-	for i := range len(skiplistLevel) {
+	for i := range skiplistLevel {
 		skiplistLevel[i].forward = nil
 		skiplistLevel[i].span = 0
 	}
@@ -63,7 +71,7 @@ func (s *Skiplist) coinFlip() int {
 	return h
 }
 
-func (s *Skiplist) newNode(ele string, score float64, h int) *SkiplistNode {
+func newNode(ele string, score float64, h int) *SkiplistNode {
 	levels := make([]SkiplistLevel, h)
 	return &SkiplistNode{
 		ele:    ele,
@@ -90,10 +98,9 @@ func (s *Skiplist) getBackList(node *SkiplistNode) ([]*SkiplistNode, []uint32) {
 	return backList, rank
 }
 
-func (s *Skiplist) del(node *SkiplistNode, backList []*SkiplistNode) {
+func (s *Skiplist) skiplistDel(node *SkiplistNode, backList []*SkiplistNode) {
 	if backList == nil {
-		nbackList, _ := s.getBackList(node)
-		backList = nbackList
+		backList, _ = s.getBackList(node)
 	}
 
 	for i := 0; i < len(node.levels); i++ {
@@ -108,7 +115,7 @@ func (s *Skiplist) del(node *SkiplistNode, backList []*SkiplistNode) {
 				continue
 			}
 			s.tail = back
-			if back == s.tail {
+			if back == s.head {
 				s.tail = nil
 			}
 		}
@@ -121,13 +128,17 @@ func (s *Skiplist) del(node *SkiplistNode, backList []*SkiplistNode) {
 	for s.level > 1 && s.head.levels[s.level-1].forward == nil {
 		s.level--
 	}
-
 	s.length--
 }
 
-func (s *Skiplist) Zadd(key string, score float64) (interface{}, bool) {
+func (z *ZSet) zsetDel(node *SkiplistNode, backList []*SkiplistNode) {
+	delete(z.dict, node.ele)
+	z.zskiplist.skiplistDel(node, backList)
+}
+
+func (s *Skiplist) skiplistAdd(ele string, score float64) {
 	h := s.coinFlip()
-	node := s.newNode(key, score, h)
+	node := newNode(ele, score, h)
 	backList, rank := s.getBackList(node)
 	if h > s.level {
 		for i := s.level; i < h; i++ {
@@ -137,24 +148,18 @@ func (s *Skiplist) Zadd(key string, score float64) (interface{}, bool) {
 		s.level = h
 	}
 
-	if backList[0].levels[0].forward != nil &&
-		backList[0].levels[0].forward.score == score &&
-		backList[0].levels[0].forward.ele == key {
-		oldNode := backList[0].levels[0].forward
-		s.del(oldNode, backList)
-	}
-
-	for i := range h {
+	for i := 0; i < h; i++ {
 		next := backList[i].levels[i].forward
 		node.levels[i].forward = next
 		backList[i].levels[i].forward = node
 
 		switch i {
 		case 0:
+			oldSpan := backList[0].levels[0].span
 			backList[i].levels[i].span = 1
 			node.backward = backList[i]
 			if next != nil {
-				node.levels[i].span = 1
+				node.levels[i].span = oldSpan - 1
 				next.backward = node
 				continue
 			}
@@ -164,18 +169,71 @@ func (s *Skiplist) Zadd(key string, score float64) (interface{}, bool) {
 		default:
 			oldSpan := backList[i].levels[i].span
 			backList[i].levels[i].span = rank[i] - rank[0] + 1
+			node.backward = backList[0]
 			if next != nil {
-				node.levels[i].span = oldSpan - (rank[i] - rank[0])
-				continue
+				node.levels[0].span = oldSpan - 1
+				next.backward = node
+			} else {
+				node.levels[0].span = 0
+				s.tail = node
 			}
-
-			node.levels[i].span = 0
 		}
 	}
-
 	for i := h; i < s.level; i++ {
 		backList[i].levels[i].span++
 	}
 	s.length++
-	return nil, false
+}
+
+func (z *ZSet) Zadd(ele string, score float64) (int, bool) {
+	if oldScore, exists := z.dict[ele]; exists {
+		if oldScore == score {
+			return 0, false
+		}
+		oldNode := newNode(ele, oldScore, 1)
+		backList, _ := z.zskiplist.getBackList(oldNode)
+		if backList[0].levels[0].forward != nil &&
+			backList[0].levels[0].forward.ele == oldNode.ele {
+			z.zsetDel(backList[0].levels[0].forward, backList)
+		}
+	}
+
+	z.dict[ele] = score
+	z.zskiplist.skiplistAdd(ele, score)
+	return 1, false
+}
+
+func (z *ZSet) Zscore(ele string) (interface{}, bool) {
+	score, exists := z.dict[ele]
+	if !exists {
+		return nil, false
+	}
+	return float64(score), false
+}
+
+func (z *ZSet) Zrank(ele string) (int, bool) {
+	s := z.zskiplist
+	score, exists := z.dict[ele]
+	if !exists {
+		return -1, false
+	}
+
+	rank := uint32(0)
+	curr := s.head
+	for l := s.level - 1; l >= 0; l-- {
+
+		for next := curr.levels[l].forward; next != nil && (next.score < score ||
+			(next.score == score &&
+				strings.Compare(next.ele, ele) < 0)); {
+			rank += curr.levels[l].span
+			curr = next
+			next = curr.levels[l].forward
+		}
+	}
+	next := curr.levels[0].forward
+	if next != nil && next.score == score && strings.Compare(next.ele, ele) == 0 {
+		return int(rank), false
+	}
+
+	return -1, false
 }

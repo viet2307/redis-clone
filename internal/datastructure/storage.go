@@ -5,8 +5,9 @@ import (
 )
 
 type Storage struct {
-	mu   sync.RWMutex
-	dict Dict
+	mu        sync.RWMutex
+	dict      Dict
+	sortedSet *ZSet
 }
 
 func NewStorage() *Storage {
@@ -15,6 +16,7 @@ func NewStorage() *Storage {
 			dictStore:        make(map[string]*Obj),
 			expiredDictStore: make(map[string]uint64),
 		},
+		sortedSet: NewZset(),
 	}
 }
 
@@ -52,4 +54,10 @@ func (s *Storage) Exist(keys []string) (int, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.dict.Exist(keys)
+}
+
+func (s *Storage) Zadd(key string, score float64) (int, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.sortedSet.Zadd(key, score)
 }
