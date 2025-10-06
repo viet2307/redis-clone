@@ -76,22 +76,16 @@ func (s *Skiplist) getBackList(node *SkiplistNode) ([]*SkiplistNode, []uint32) {
 	backList := make([]*SkiplistNode, s.level)
 	rank := make([]uint32, s.level)
 	curr := s.head
-	span := uint32(1)
-	for i := 0; i < s.level; i++ {
+	span := uint32(0)
+	for i := s.level - 1; i >= 0; i-- {
 		next := curr.levels[i].forward
 		for next != nil && (next.score < node.score || (next.score == node.score && next.ele < node.ele)) {
+			span += curr.levels[i].span
 			curr = next
 			next = curr.levels[i].forward
-			if i == 0 {
-				span++
-			}
 		}
 		backList[i] = curr
-		if i == 0 {
-			rank[i] = span
-		} else {
-			rank[i] = rank[i-1]
-		}
+		rank[i] = span
 	}
 	return backList, rank
 }
@@ -104,18 +98,24 @@ func (s *Skiplist) del(node *SkiplistNode, backList []*SkiplistNode) {
 
 	for i := 0; i < len(node.levels); i++ {
 		back := backList[i]
-		back.levels[i].span += node.levels[i].span - 1
 		next := node.levels[i].forward
 		back.levels[i].forward = next
+
+		back.levels[i].span += node.levels[i].span - 1
 		if i == 0 {
 			if next != nil {
 				next.backward = back
-				back.levels[i].span = 1
-			} else {
-				s.tail = back
-				back.levels[i].span = 0
+				continue
+			}
+			s.tail = back
+			if back == s.tail {
+				s.tail = nil
 			}
 		}
+	}
+
+	for i := len(node.levels); i < s.level; i++ {
+		backList[i].levels[i].span--
 	}
 
 	for s.level > 1 && s.head.levels[s.level-1].forward == nil {
@@ -123,13 +123,6 @@ func (s *Skiplist) del(node *SkiplistNode, backList []*SkiplistNode) {
 	}
 
 	s.length--
-	if node == s.tail {
-		if node.backward == s.head {
-			s.tail = nil
-		} else {
-			s.tail = node.backward
-		}
-	}
 }
 
 func (s *Skiplist) Zadd(key string, score float64) (interface{}, bool) {
@@ -139,6 +132,7 @@ func (s *Skiplist) Zadd(key string, score float64) (interface{}, bool) {
 	if h > s.level {
 		for i := s.level; i < h; i++ {
 			backList = append(backList, s.head)
+			rank = append(rank, rank[s.level-1])
 		}
 		s.level = h
 	}
@@ -146,22 +140,41 @@ func (s *Skiplist) Zadd(key string, score float64) (interface{}, bool) {
 	if backList[0].levels[0].forward != nil &&
 		backList[0].levels[0].forward.score == score &&
 		backList[0].levels[0].forward.ele == key {
-		s.del(node, backList)
+		oldNode := backList[0].levels[0].forward
+		s.del(oldNode, backList)
 	}
 
 	for i := range h {
-		node.levels[i].forward = backList[i].levels[i].forward
+		next := backList[i].levels[i].forward
+		node.levels[i].forward = next
 		backList[i].levels[i].forward = node
-		backList[i].levels[i].span = rank[i] + 1
+
+		switch i {
+		case 0:
+			backList[i].levels[i].span = 1
+			node.backward = backList[i]
+			if next != nil {
+				node.levels[i].span = 1
+				next.backward = node
+				continue
+			}
+
+			node.levels[i].span = 0
+			s.tail = node
+		default:
+			oldSpan := backList[i].levels[i].span
+			backList[i].levels[i].span = rank[i] - rank[0] + 1
+			if next != nil {
+				node.levels[i].span = oldSpan - (rank[i] - rank[0])
+				continue
+			}
+
+			node.levels[i].span = 0
+		}
 	}
 
-	node.backward = backList[0]
-	if node.levels[0].forward != nil {
-		node.levels[0].forward.backward = node
-		node.levels[0].span = 1
-	} else {
-		s.tail = node
-		node.levels[0].span = 1
+	for i := h; i < s.level; i++ {
+		backList[i].levels[i].span++
 	}
 	s.length++
 	return nil, false

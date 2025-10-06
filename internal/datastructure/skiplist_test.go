@@ -5,7 +5,6 @@ import (
 	"testing"
 )
 
-// Helper to seed randomness for deterministic tests
 func seedRand() {
 	rand.Seed(42)
 }
@@ -32,7 +31,6 @@ func TestCoinFlip(t *testing.T) {
 	seedRand()
 	sl := NewSkiplist(16)
 
-	// Should always return at least 1
 	h := sl.coinFlip()
 	if h < 1 || h > sl.maxLevel {
 		t.Errorf("coinFlip returned invalid height %d", h)
@@ -79,19 +77,16 @@ func TestZaddAndDel(t *testing.T) {
 	_, _ = sl.Zadd("y", 20.0)
 	_, _ = sl.Zadd("z", 30.0)
 
-	// Check length
 	if sl.length != 3 {
 		t.Errorf("Expected length 3, got %d", sl.length)
 	}
 
-	// Check tail
 	if sl.tail == nil || sl.tail.ele != "z" {
 		t.Errorf("Expected tail to be 'z', got '%v'", sl.tail)
 	}
 
 	_, _ = sl.Zadd("y", 20.0)
 
-	// Remove tail node manually
 	node := sl.tail
 	backList, _ := sl.getBackList(node)
 	sl.del(node, backList)
@@ -106,7 +101,7 @@ func TestBackwardLinks(t *testing.T) {
 	_, _ = sl.Zadd("B", 2.0)
 	_, _ = sl.Zadd("C", 3.0)
 
-	nodeB := sl.head.levels[0].forward.levels[0].forward // Should be "B"
+	nodeB := sl.head.levels[0].forward.levels[0].forward
 	if nodeB.backward == nil || nodeB.backward.ele != "A" {
 		t.Errorf("Backward link from B should be A, got %v", nodeB.backward)
 	}
