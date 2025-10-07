@@ -12,7 +12,7 @@ func seedRand() {
 
 func TestZrankEmptyZSet(t *testing.T) {
 	z := NewZset()
-	rank, _ := z.Zrank("nonexistent")
+	rank := z.Zrank("nonexistent")
 	if rank != -1 {
 		t.Errorf("Expected rank -1 for nonexistent element in empty zset, got %v", rank)
 	}
@@ -54,10 +54,11 @@ func TestZrankDuplicateScores(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		rank, _ := z.Zrank(tt.ele)
+		rank := z.Zrank(tt.ele)
 		if rank != tt.want {
 			t.Errorf("Zrank(%s) = %v, want %v", tt.ele, rank, tt.want)
 		}
+		fmt.Printf("After update: Zrank(%s) = %v, want %v\n", tt.ele, rank, tt.want)
 	}
 }
 
@@ -79,7 +80,7 @@ func TestZrankAfterScoreUpdate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		rank, _ := z.Zrank(tt.ele)
+		rank := z.Zrank(tt.ele)
 		if rank != tt.want {
 			t.Errorf("After update: Zrank(%s) = %v, want %v", tt.ele, rank, tt.want)
 		}
@@ -149,12 +150,12 @@ func TestZscore(t *testing.T) {
 	z.Zadd("alice", 100.0)
 	z.Zadd("bob", 200.0)
 
-	score, _ := z.Zscore("alice")
+	score := z.Zscore("alice")
 	if score == nil || score != 100.0 {
 		t.Errorf("Expected score 100.0 for alice, got %v", score)
 	}
 
-	score, _ = z.Zscore("charlie")
+	score = z.Zscore("charlie")
 	if score != nil {
 		t.Error("Expected nil for non-existent member")
 	}
@@ -162,17 +163,17 @@ func TestZscore(t *testing.T) {
 	z.Zadd("alice", 100.5)
 	z.Zadd("bob", 200.7)
 
-	score, _ = z.Zscore("alice")
+	score = z.Zscore("alice")
 	if score == nil || score != 100.5 {
 		t.Errorf("Expected score 100.5 for alice, got %v", score)
 	}
 
-	score, _ = z.Zscore("bob")
+	score = z.Zscore("bob")
 	if score == nil || score != 200.7 {
 		t.Errorf("Expected score 200.7 for alice, got %v", score)
 	}
 
-	score, _ = z.Zscore("charlie")
+	score = z.Zscore("charlie")
 	if score != nil {
 		t.Error("Expected nil for non-existent member")
 	}
@@ -184,17 +185,17 @@ func TestZrank(t *testing.T) {
 	z.Zadd("bob", 200.0)
 	z.Zadd("charlie", 150.0)
 
-	rank, _ := z.Zrank("alice")
+	rank := z.Zrank("alice")
 	if rank == -1 || rank != 0 {
 		t.Errorf("Expected rank 0 for alice, got %v", rank)
 	}
 
-	rank, _ = z.Zrank("charlie")
+	rank = z.Zrank("charlie")
 	if rank == -1 || rank != 1 {
 		t.Errorf("Expected rank 1 for charlie, got %v", rank)
 	}
 
-	rank, _ = z.Zrank("bob")
+	rank = z.Zrank("bob")
 	if rank == -1 || rank != 2 {
 		t.Errorf("Expected rank 2 for bob, got %v", rank)
 	}

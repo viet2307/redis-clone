@@ -60,13 +60,19 @@ func (e *Executor) CmdParser(data []byte) (*Command, error) {
 }
 
 const (
-	CmdPing   = "PING"
-	CmdSet    = "SET"
-	CmdGet    = "GET"
-	CmdTtl    = "TTL"
-	CmdDel    = "DEL"
-	CmdExist  = "EXIST"
-	CmdExpire = "EXPIRE"
+	CmdPing      = "PING"
+	CmdSet       = "SET"
+	CmdGet       = "GET"
+	CmdTtl       = "TTL"
+	CmdDel       = "DEL"
+	CmdExist     = "EXIST"
+	CmdExpire    = "EXPIRE"
+	CmdZadd      = "ZADD"
+	CmdZScore    = "ZSCORE"
+	CmdZrank     = "ZRANK"
+	CmdCMSINIT   = "CMS.INITBYPROB"
+	CmdCMSIncrBy = "CMS.INCRBY"
+	CmdCMSQuery  = "CMS.QUERY"
 )
 
 func (e *Executor) Execute(cmd *Command) []byte {
@@ -86,6 +92,18 @@ func (e *Executor) Execute(cmd *Command) []byte {
 		return e.cmdExist(cmd.Args)
 	case CmdDel:
 		return e.cmdDel(cmd.Args)
+	case CmdZadd:
+		return e.CmdZadd(cmd.Args)
+	case CmdZrank:
+		return e.CmdZrank(cmd.Args)
+	case CmdZScore:
+		return e.CmdZScore(cmd.Args)
+	case CmdCMSINIT:
+		return e.CmdInitCMS(cmd.Args)
+	case CmdCMSIncrBy:
+		return e.CmdIncrBy(cmd.Args)
+	case CmdCMSQuery:
+		return e.CmdCMSQuery(cmd.Args)
 	default:
 		return en.Encode(errors.New("ERR unsupported CMD detected"), false)
 	}
@@ -174,5 +192,74 @@ func (e *Executor) cmdExist(args []string) []byte {
 		return en.Encode(errors.New("ERR wrong number of arguments for 'EXIST' command"), false)
 	}
 	res, _ := e.store.Exist(args)
+	return en.Encode(res, false)
+}
+
+func (e *Executor) CmdZadd(args []string) []byte {
+	en := protocol.Encoder{}
+	if len(args) < 3 {
+		return en.Encode(errors.New("ERR wrong number of arguments for 'ZADD' command, currently only support single [key, element, score] ZADD"), false)
+	}
+	res := e.store.Zadd(args[0], args[1:])
+	if res == -1 {
+		return en.Encode(errors.New("ERR failed to execute command 'ZADD'"), false)
+	}
+	return en.Encode(res, false)
+}
+
+func (e *Executor) CmdZrank(args []string) []byte {
+	en := protocol.Encoder{}
+	if len(args) != 2 {
+		return en.Encode(errors.New("ERR wrong number of arguments for 'ZRANK' command"), false)
+	}
+	res := e.store.Zrank(args[0], args[1])
+	if res == -1 {
+		return en.Encode(errors.New("ERR failed to execute command 'ZRANK'"), false)
+	}
+	return en.Encode(res, false)
+}
+
+func (e *Executor) CmdZScore(args []string) []byte {
+	en := protocol.Encoder{}
+	if len(args) != 2 {
+		return en.Encode(errors.New("ERR wrong number of arguments for 'ZSCORE' command"), false)
+	}
+	res := e.store.Zscore(args[0], args[1])
+	if res == -1 {
+		return en.Encode(errors.New("ERR failed to execute command 'ZSCORE'"), false)
+	}
+	return en.Encode(res, false)
+}
+
+func (e *Executor) CmdInitCMS(args []string) []byte {
+	en := protocol.Encoder{}
+	if len(args) != 3 {
+		return en.Encode(errors.New("ERR wrong number of arguments for 'CMS.INITBYPROB' command"), false)
+	}
+	errRate, _ := strconv.ParseFloat(args[1], 64)
+	errProb, _ := strconv.ParseFloat(args[2], 64)
+	res := e.store.NewCMS(args[0], errRate, errProb)
+	if res == -1 {
+		return en.Encode(errors.New("ERR count min sketch with the same key already existed"), false)
+	}
+	return en.Encode("OK", true)
+}
+
+func (e *Executor) CmdIncrBy(args []string) []byte {
+	en := protocol.Encoder{}
+	if len(args) != 3 {
+		return en.Encode(errors.New("ERR wrong number of arguments for 'CMS.INCRBY' command"), false)
+	}
+	value, _ := strconv.ParseUint(args[2], 10, 32)
+	res := e.store.CMSIncrBy(args[0], args[1], uint32(value))
+	return en.Encode(res, false)
+}
+
+func (e *Executor) CmdCMSQuery(args []string) []byte {
+	en := protocol.Encoder{}
+	if len(args) != 2 {
+		return en.Encode(errors.New("ERR wrong number of arguments for 'CMS.QUERY' command"), false)
+	}
+	res := e.store.CMSQuery(args[0], args[1])
 	return en.Encode(res, false)
 }

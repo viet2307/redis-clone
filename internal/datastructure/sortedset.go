@@ -182,37 +182,34 @@ func (s *Skiplist) skiplistAdd(ele string, score float64) {
 	s.length++
 }
 
-func (z *ZSet) Zadd(ele string, score float64) (int, bool) {
+func (z *ZSet) Zadd(ele string, score float64) int {
 	if oldScore, exists := z.dict[ele]; exists {
 		if oldScore == score {
-			return 0, false
+			return 0
 		}
 		oldNode := newNode(ele, oldScore, 1)
 		backList, _ := z.zskiplist.getBackList(oldNode)
-		if backList[0].levels[0].forward != nil &&
-			backList[0].levels[0].forward.ele == oldNode.ele {
-			z.zsetDel(backList[0].levels[0].forward, backList)
-		}
+		z.zsetDel(backList[0].levels[0].forward, backList)
 	}
 
 	z.dict[ele] = score
 	z.zskiplist.skiplistAdd(ele, score)
-	return 1, false
+	return 1
 }
 
-func (z *ZSet) Zscore(ele string) (interface{}, bool) {
+func (z *ZSet) Zscore(ele string) interface{} {
 	score, exists := z.dict[ele]
 	if !exists {
-		return nil, false
+		return nil
 	}
-	return float64(score), false
+	return float64(score)
 }
 
-func (z *ZSet) Zrank(ele string) (int, bool) {
+func (z *ZSet) Zrank(ele string) int {
 	s := z.zskiplist
 	score, exists := z.dict[ele]
 	if !exists {
-		return -1, false
+		return -1
 	}
 
 	rank := uint32(0)
@@ -229,8 +226,9 @@ func (z *ZSet) Zrank(ele string) (int, bool) {
 	}
 	next := curr.levels[0].forward
 	if next != nil && next.score == score && strings.Compare(next.ele, ele) == 0 {
-		return int(rank), false
+		rank += curr.levels[0].span
+		return int(rank - 1)
 	}
 
-	return -1, false
+	return -1
 }

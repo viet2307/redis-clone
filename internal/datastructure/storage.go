@@ -1,13 +1,15 @@
 package datastructure
 
 import (
+	"strconv"
 	"sync"
 )
 
 type Storage struct {
 	mu        sync.RWMutex
 	dict      Dict
-	sortedSet *ZSet
+	sortedSet map[string]*ZSet
+	cms       map[string]*CMS
 }
 
 func NewStorage() *Storage {
@@ -16,8 +18,16 @@ func NewStorage() *Storage {
 			dictStore:        make(map[string]*Obj),
 			expiredDictStore: make(map[string]uint64),
 		},
-		sortedSet: NewZset(),
+		sortedSet: make(map[string]*ZSet),
 	}
+}
+
+func (s *Storage) NewCMS(key string, errRate float64, errProb float64) int {
+	if _, ok := s.cms[key]; ok {
+		return -1
+	}
+	s.cms[key] = NewCMS(errRate, errProb)
+	return 1
 }
 
 func (s *Storage) Set(key string, value interface{}, expir uint64) {
@@ -56,8 +66,60 @@ func (s *Storage) Exist(keys []string) (int, bool) {
 	return s.dict.Exist(keys)
 }
 
-func (s *Storage) Zadd(key string, score float64) (int, bool) {
+/*
+Create new zdict for `key`
+*/
+func (s *Storage) zdictExisted(key string) {
+	if _, ok := s.sortedSet[key]; !ok {
+		s.sortedSet[key] = NewZset()
+	}
+}
+
+/*
+Currently only support single `element - score` zadd
+*/
+func (s *Storage) Zadd(key string, args []string) int {
+	if len(args) != 2 {
+		return -1
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.sortedSet.Zadd(key, score)
+	s.zdictExisted(key)
+
+	ele := args[0]
+	score, _ := strconv.ParseFloat(args[1], 64)
+	return s.sortedSet[key].Zadd(ele, score)
+}
+
+func (s *Storage) Zscore(key string, ele string) float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.zdictExisted(key)
+
+	res := s.sortedSet[key].Zscore(ele)
+	if res == nil {
+		return -1
+	}
+	return res.(float64)
+}
+
+func (s *Storage) Zrank(key string, ele string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.zdictExisted(key)
+
+	return s.sortedSet[key].Zrank(ele)
+}
+
+func (s *Storage) CMSIncrBy(key string, item string, value uint32) uint32 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cms[key].IncrBy(item, value)
+}
+
+func (s *Storage) CMSQuery(key string, item string) uint32 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cms[key].Query(item)
 }
