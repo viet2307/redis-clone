@@ -12,13 +12,13 @@ Review my own knowledge on the concepts of:
 
 #### TODO
 <details>
-  <summary>[x] Multi-threaded TCP server using goroutine</summary>
+  <summary>Multi-threaded TCP server using goroutine</summary>
 
 - [x] I/O multiplexing model with threadpool
 </details>
 
 <details>
-  <summary>[x] RESP protocol parser</summary>
+  <summary>RESP protocol parser</summary>
 
 - [x] Simple string, bulk string parser  
 - [x] Integer parser  
@@ -28,7 +28,7 @@ Review my own knowledge on the concepts of:
 </details>
 
 <details>
-  <summary>[x] Redis commands implementation</summary>
+  <summary>Redis commands implementation</summary>
 
 - [x] PING  
 - [x] GET  
@@ -41,7 +41,7 @@ Review my own knowledge on the concepts of:
 </details>
 
 <details>
-  <summary>[x] Sorted-set implementation</summary>
+  <summary>Sorted-set implementation</summary>
 
 - [x] ZADD  
 - [x] ZSCORE  
@@ -49,7 +49,7 @@ Review my own knowledge on the concepts of:
 </details>
 
 <details>
-  <summary>[x] Probabilistic datastructure</summary>
+  <summary>Probabilistic datastructure</summary>
 
 - [x] Count min sketch  
   - [x] CMS.INITBYPROB  
@@ -62,15 +62,21 @@ Review my own knowledge on the concepts of:
 </details>
 
 <details>
-  <summary>[ ] Cache eviction</summary>
+  <summary>Cache eviction</summary>
+
+- [ ] Implementation
 </details>
 
 <details>
-  <summary>[ ] Graceful shutdown</summary>
+  <summary>Graceful shutdown</summary>
+
+- [ ] Implementation
 </details>
 
 <details>
-  <summary>[ ] Sharded counter (Multi-threading)</summary>
+  <summary>Multi-threading</summary>
+
+- [ ] Sharded counter
 </details>
 
 ## REDIS
