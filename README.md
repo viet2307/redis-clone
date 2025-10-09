@@ -11,19 +11,67 @@ Review my own knowledge on the concepts of:
 - I/O models and concurrency related systemcalls (epoll, kqueue...)
 
 #### TODO
-- [x] Multi-threaded TCP server using goroutine
-    - [x] I/O multiplexing model with threadpool
-- [x] RESP protocol parser
-    - [x] Simple string, bulk string parser
-    - [x] Integer parser
-    - [x] Error parser
-    - [x] Array parser
-    - [x] Parser tests
-- [ ] Redis commands implementation:
-    - [x] PING
-    - [ ] GET
-    - [ ] SET
-- [ ] Sorted-set implementation
+<details>
+  <summary>[x] Multi-threaded TCP server using goroutine</summary>
+
+- [x] I/O multiplexing model with threadpool
+</details>
+
+<details>
+  <summary>[x] RESP protocol parser</summary>
+
+- [x] Simple string, bulk string parser  
+- [x] Integer parser  
+- [x] Error parser  
+- [x] Array parser  
+- [x] Parser tests
+</details>
+
+<details>
+  <summary>[x] Redis commands implementation</summary>
+
+- [x] PING  
+- [x] GET  
+- [x] SET  
+- [x] TTL  
+- [x] DEL  
+- [x] EXIST  
+- [x] EXPIRE  
+- [ ] INFO (OPTIONAL)
+</details>
+
+<details>
+  <summary>[x] Sorted-set implementation</summary>
+
+- [x] ZADD  
+- [x] ZSCORE  
+- [x] ZRANK
+</details>
+
+<details>
+  <summary>[x] Probabilistic datastructure</summary>
+
+- [x] Count min sketch  
+  - [x] CMS.INITBYPROB  
+  - [x] CMS.INCRBY  
+  - [x] CMS.QUERY  
+- [x] Bloom filter  
+  - [x] BF.RESERVE  
+  - [x] BF.MADD  
+  - [x] BF.EXISTS
+</details>
+
+<details>
+  <summary>[ ] Cache eviction</summary>
+</details>
+
+<details>
+  <summary>[ ] Graceful shutdown</summary>
+</details>
+
+<details>
+  <summary>[ ] Sharded counter (Multi-threading)</summary>
+</details>
 
 ## REDIS
 A in-memory key-value store, stores data in RAM, use AOF (append-only file) command log for persistence
@@ -133,6 +181,10 @@ Serialization protocol of redis, protocol is text based separated by CRLF. [See 
 - [Integer](https://redis.io/docs/latest/develop/reference/protocol-spec/#integers): Encoded with sign and value
 - [Error](https://redis.io/docs/latest/develop/reference/protocol-spec/#simple-errors): Specifically for error responses
 - [Array](https://redis.io/docs/latest/develop/reference/protocol-spec/#arrays): Support both nested array and mixed type array with `[]interface{}`
+- [Simple set](https://redis.io/docs/latest/develop/data-types/sets/): unordered collection of **unique** strings (does not store duplicates)
+- [Sorted set](https://redis.io/docs/latest/develop/data-types/sorted-sets/): Implemented with skip list, a multi-level linked list supporting $O(log(n)$) query, add, update and delete on average for storing unique item sorted by their `scores`(float64 format) and `key`(string format)
+- [Count min sketch](https://redis.io/docs/latest/develop/data-types/probabilistic/count-min-sketch/): **Probabilistic** data structure to **estimates** the *frequency* of an element
+- [Bloom filter](https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/): a **probabilistic** data structure that checks for *presence* of an item in a set. Can return false positive but *never false negative*
 
 **Testing:** Protocol parser tests are in [test module](./internal/protocol/test)
 
@@ -235,3 +287,6 @@ make
 - [Redis Protocol Specification](https://redis.io/docs/latest/develop/reference/protocol-spec/)
 - [Redis Commands Documentation](https://redis.io/docs/latest/commands/)
 - [Operating Systems: Three Easy Pieces](https://pages.cs.wisc.edu/~remzi/OSTEP/)
+- [Skiplist](https://youtu.be/2g9OSRKJuzM?si=jg28FBn7JS0y-km2)
+- [Count min sketch](https://vivekbansal.substack.com/p/count-min-sketch)
+- [Bloom filter](https://vivekbansal.substack.com/p/bloom-filters?utm_source=publication-search)
