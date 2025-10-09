@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strconv"
@@ -76,6 +77,7 @@ const (
 	CmdBFReverse = "BF.RESERVE"
 	CmdBFMAdd    = "BF.MADD"
 	CmdBFExist   = "BF.EXISTS"
+	CmdInfo      = "INFO"
 )
 
 func (e *Executor) Execute(cmd *Command) []byte {
@@ -113,6 +115,8 @@ func (e *Executor) Execute(cmd *Command) []byte {
 		return e.CmdBFMADD(cmd.Args)
 	case CmdBFExist:
 		return e.CmdBFExist(cmd.Args)
+	case CmdInfo:
+		return e.CmdInfo(cmd.Args)
 	default:
 		return en.Encode(errors.New("ERR unsupported CMD detected"), false)
 	}
@@ -306,4 +310,13 @@ func (e *Executor) CmdBFExist(args []string) []byte {
 		return en.Encode(errors.New("ERR bloom filter at the specified key does not exist"), false)
 	}
 	return en.Encode(res, false)
+}
+
+func (e *Executor) CmdInfo(args []string) []byte {
+	en := protocol.Encoder{}
+	var info []byte
+	buf := bytes.NewBuffer(info)
+	buf.WriteString("# Keyspace\r\n")
+	buf.WriteString(fmt.Sprintf("db0:keys=%d, expires=%d\r\n", datastructure.HashKeySpace.Key, datastructure.HashKeySpace.Expires))
+	return en.Encode(buf, false)
 }

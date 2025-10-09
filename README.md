@@ -37,7 +37,7 @@ Review my own knowledge on the concepts of:
 - [x] DEL  
 - [x] EXIST  
 - [x] EXPIRE  
-- [ ] INFO (OPTIONAL)
+- [x] INFO
 </details>
 
 <details>
@@ -64,7 +64,8 @@ Review my own knowledge on the concepts of:
 <details>
   <summary>Cache eviction</summary>
 
-- [ ] Implementation
+- [ ] Random cache eviction scheme
+- [ ] LRU cache eviction scheme
 </details>
 
 <details>

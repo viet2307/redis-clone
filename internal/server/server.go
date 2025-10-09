@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"tcp-server.com/m/internal/command"
+	"tcp-server.com/m/internal/config"
 	"tcp-server.com/m/internal/datastructure"
 )
 
@@ -31,7 +32,7 @@ func Stop(s *Server) error {
 }
 
 func (s *Server) Start() error {
-	listen, err := net.Listen("tcp", s.port)
+	listen, err := net.Listen(config.Protocol, s.port)
 	if err != nil {
 		return fmt.Errorf("error establising new TCP server:\n%v", err)
 	}

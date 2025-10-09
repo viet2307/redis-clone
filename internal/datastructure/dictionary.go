@@ -12,6 +12,10 @@ type Dict struct {
 }
 
 func (d *Dict) Set(key string, value interface{}, expir uint64) {
+	v := d.dictStore[key]
+	if v == nil {
+		HashKeySpace.Key++
+	}
 	d.dictStore[key] = &Obj{Value: value}
 	d.expiredDictStore[key] = expir
 }
@@ -57,6 +61,7 @@ func (d *Dict) Del(keys []string) (int, bool) {
 		}
 		delete(d.dictStore, k)
 		delete(d.expiredDictStore, k)
+		HashKeySpace.Key--
 		cnt++
 	}
 	return cnt, true
