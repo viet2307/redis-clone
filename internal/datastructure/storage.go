@@ -10,6 +10,7 @@ type Storage struct {
 	dict      Dict
 	sortedSet map[string]*ZSet
 	cms       map[string]*CMS
+	bf        map[string]*Bloom
 }
 
 func NewStorage() *Storage {
@@ -27,6 +28,14 @@ func (s *Storage) NewCMS(key string, errRate float64, errProb float64) int {
 		return -1
 	}
 	s.cms[key] = NewCMS(errRate, errProb)
+	return 1
+}
+
+func (s *Storage) NewBF(key string, errRate float64, entriesNum uint64) int {
+	if _, ok := s.bf[key]; ok {
+		return -1
+	}
+	s.bf[key] = NewBloom(errRate, entriesNum)
 	return 1
 }
 
@@ -122,4 +131,24 @@ func (s *Storage) CMSQuery(key string, item string) uint32 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.cms[key].Query(item)
+}
+
+func (s *Storage) BFAdd(key string, item string) int {
+	if _, ok := s.bf[key]; !ok {
+		return -1
+	}
+	s.bf[key].Add(item)
+	return 1
+}
+
+func (s *Storage) BFQuery(key string, item string) int {
+	if _, ok := s.bf[key]; !ok {
+		return -1
+	}
+	res := s.bf[key].Exist(item)
+	if res {
+		return 1
+	}
+
+	return 0
 }

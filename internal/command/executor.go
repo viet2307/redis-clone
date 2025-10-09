@@ -73,6 +73,9 @@ const (
 	CmdCMSINIT   = "CMS.INITBYPROB"
 	CmdCMSIncrBy = "CMS.INCRBY"
 	CmdCMSQuery  = "CMS.QUERY"
+	CmdBFReverse = "BF.RESERVE"
+	CmdBFMAdd    = "BF.MADD"
+	CmdBFExist   = "BF.EXISTS"
 )
 
 func (e *Executor) Execute(cmd *Command) []byte {
@@ -104,6 +107,12 @@ func (e *Executor) Execute(cmd *Command) []byte {
 		return e.CmdIncrBy(cmd.Args)
 	case CmdCMSQuery:
 		return e.CmdCMSQuery(cmd.Args)
+	case CmdBFReverse:
+		return e.CmdBFReverse(cmd.Args)
+	case CmdBFMAdd:
+		return e.CmdBFMADD(cmd.Args)
+	case CmdBFExist:
+		return e.CmdBFExist(cmd.Args)
 	default:
 		return en.Encode(errors.New("ERR unsupported CMD detected"), false)
 	}
@@ -261,5 +270,40 @@ func (e *Executor) CmdCMSQuery(args []string) []byte {
 		return en.Encode(errors.New("ERR wrong number of arguments for 'CMS.QUERY' command"), false)
 	}
 	res := e.store.CMSQuery(args[0], args[1])
+	return en.Encode(res, false)
+}
+
+func (e *Executor) CmdBFReverse(args []string) []byte {
+	en := protocol.Encoder{}
+	if len(args) != 3 {
+		return en.Encode(errors.New("ERR wrong number of arguments for 'BF.RESERVE' command"), false)
+	}
+	errRate, _ := strconv.ParseFloat(args[1], 64)
+	entries, _ := strconv.ParseUint(args[2], 10, 64)
+	e.store.NewBF(args[0], errRate, entries)
+	return en.Encode("OK", true)
+}
+
+func (e *Executor) CmdBFMADD(args []string) []byte {
+	en := protocol.Encoder{}
+	if len(args) < 2 {
+		return en.Encode(errors.New("ERR wrong number of arguments for 'BF.MADD' command"), false)
+	}
+	res := e.store.BFAdd(args[0], args[1])
+	if res == -1 {
+		return en.Encode(errors.New("ERR bloom filter at the specified key does not exist"), false)
+	}
+	return en.Encode(res, false)
+}
+
+func (e *Executor) CmdBFExist(args []string) []byte {
+	en := protocol.Encoder{}
+	if len(args) < 2 {
+		return en.Encode(errors.New("ERR wrong number of arguments for 'BF.MADD' command"), false)
+	}
+	res := e.store.BFQuery(args[0], args[1])
+	if res == -1 {
+		return en.Encode(errors.New("ERR bloom filter at the specified key does not exist"), false)
+	}
 	return en.Encode(res, false)
 }
