@@ -6,7 +6,7 @@ import (
 	"github.com/spaolacci/murmur3"
 )
 
-const SEED uint32 = 0x9747b28c
+const SEED uint32 = 19980605
 
 var LogSquare float64 = math.Log(2) * math.Log(2)
 
