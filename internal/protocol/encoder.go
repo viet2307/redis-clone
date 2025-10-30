@@ -24,7 +24,7 @@ func (e *Encoder) Encode(value interface{}, isSimpleString bool) []byte {
 			return []byte(fmt.Sprintf("+%s%s", v, CRLF))
 		}
 		return []byte(fmt.Sprintf("$%d%s%s%s", len(v), CRLF, v, CRLF))
-	case int64, int32, int16, int8, int:
+	case uint64, int64, uint32, int32, uint16, int16, uint8, int8, int:
 		return []byte(fmt.Sprintf(":%d%s", v, CRLF))
 	case error:
 		return []byte(fmt.Sprintf("-%s%s", v, CRLF))

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 )
 
 type Handler struct {
@@ -27,19 +28,22 @@ func (h *Handler) HandleConnection(s *Server) {
 		"bye":  {},
 		"exit": {},
 	}
-	buf := make([]byte, 4096)
-	_, err := h.conn.Read(buf)
-	if err != nil {
-		return
-	}
+	for {
+		buf := make([]byte, 4096)
+		n, err := h.conn.Read(buf)
+		if err != nil {
+			return
+		}
 
-	if _, ok := shutdown[string(buf)]; ok {
-		fmt.Fprintf(h.conn, "Goodbye!!!")
-		return
+		data := strings.TrimSpace(string(buf[:n]))
+		if _, ok := shutdown[strings.ToLower(string(data))]; ok {
+			fmt.Fprintf(h.conn, "Goodbye!!!")
+			return
+		}
+		cmd, err := s.executor.CmdParser([]byte(data))
+		if err != nil {
+			fmt.Fprintf(h.conn, "%s", err)
+		}
+		h.conn.Write(s.executor.Execute(cmd))
 	}
-	cmd, err := s.executor.CmdParser(buf)
-	if err != nil {
-		fmt.Fprintf(h.conn, "%s", err)
-	}
-	h.conn.Write(s.executor.Execute(cmd))
 }

@@ -43,6 +43,9 @@ func (e *Executor) CmdParser(data []byte) (*Command, error) {
 			break
 		}
 	}
+	if cmd == "" {
+		return &Command{Name: strings.ToUpper(in), Args: nil}, nil
+	}
 
 	for i := idx; i < len(in); i++ {
 		c := in[i]
