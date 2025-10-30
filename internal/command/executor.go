@@ -27,36 +27,17 @@ func NewExecutor(store *datastructure.Storage) *Executor {
 	}
 }
 
-func (e *Executor) CmdParser(data []byte) (*Command, error) {
+func (e *Executor) CmdParser(data []string) (*Command, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("empty input")
 	}
 
-	in := strings.TrimSpace(string(data))
-	cmd, idx := "", 0
-	args := make([]string, 0)
-
-	for i, c := range in {
-		if c == ' ' && cmd == "" {
-			cmd = strings.ToUpper(in[0:i])
-			idx = i + 1
-			break
-		}
-	}
-	if cmd == "" {
-		return &Command{Name: strings.ToUpper(in), Args: nil}, nil
+	cmd := strings.ToUpper(data[0])
+	args := make([]string, len(data)-1)
+	for i := 1; i < len(data); i++ {
+		args[i-1] = strings.ToUpper(data[i])
 	}
 
-	for i := idx; i < len(in); i++ {
-		c := in[i]
-		if c == ' ' {
-			val := strings.ToUpper(in[idx:i])
-			args = append(args, val)
-			idx = i + 1
-		}
-	}
-
-	args = append(args, strings.ToUpper(in[idx:]))
 	return &Command{
 		Name: cmd,
 		Args: args,
@@ -163,7 +144,7 @@ func (e *Executor) cmdGET(args []string) []byte {
 	key := args[0]
 	obj, ok := e.store.Get(key)
 	if !ok {
-		return en.Encode(nil, false)
+		return en.Encode("nil", true)
 	}
 	return en.Encode(obj.Value, false)
 }
