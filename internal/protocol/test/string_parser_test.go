@@ -1,6 +1,7 @@
 package protocol_test
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -9,14 +10,14 @@ func TestParser_OK(t *testing.T) {
 	tests := []struct {
 		name string
 		in   []byte
-		want string
+		want []byte
 	}{
-		{"simple_basic", []byte("+OK\r\n"), "OK"},
-		{"simple_empty", []byte("+\r\n"), ""},
-		{"bulk_ascii", []byte("$5\r\nhello\r\n"), "hello"},
-		{"bulk_empty", []byte("$0\r\n\r\n"), ""},
+		{"simple_basic", []byte("+OK\r\n"), []byte("OK")},
+		{"simple_empty", []byte("+\r\n"), []byte("")},
+		{"bulk_ascii", []byte("$5\r\nhello\r\n"), []byte("hello")},
+		{"bulk_empty", []byte("$0\r\n\r\n"), []byte("")},
 		// Unicode: "😊" is 4 bytes in UTF-8; length must be 4
-		{"bulk_unicode", []byte("$4\r\n😊\r\n"), "😊"},
+		{"bulk_unicode", []byte("$4\r\n😊\r\n"), []byte("😊")},
 	}
 	for _, tc := range tests {
 		tc := tc
@@ -25,7 +26,7 @@ func TestParser_OK(t *testing.T) {
 
 			got, pos, err := p.DecodeOne(tc.in, 0)
 			mustNoErr(t, err)
-			if got != tc.want {
+			if !bytes.Equal(got, tc.want) {
 				t.Fatalf("got %q, pos: %d, want %q", got, pos, tc.want)
 			}
 		})

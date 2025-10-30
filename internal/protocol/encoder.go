@@ -17,7 +17,7 @@ func (e *Encoder) encodeStringArray(sa []string) []byte {
 	return res
 }
 
-func (e *Encoder) Encode(value interface{}, isSimpleString bool) []byte {
+func (e *Encoder) Encode(value any, isSimpleString bool) []byte {
 	switch v := value.(type) {
 	case string:
 		if isSimpleString {
@@ -26,6 +26,8 @@ func (e *Encoder) Encode(value interface{}, isSimpleString bool) []byte {
 		return []byte(fmt.Sprintf("$%d%s%s%s", len(v), CRLF, v, CRLF))
 	case uint64, int64, uint32, int32, uint16, int16, uint8, int8, int:
 		return []byte(fmt.Sprintf(":%d%s", v, CRLF))
+	case float32, float64:
+		return []byte(fmt.Sprintf(",%f%s", v, CRLF))
 	case error:
 		return []byte(fmt.Sprintf("-%s%s", v, CRLF))
 	case []string:

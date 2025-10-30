@@ -20,6 +20,8 @@ func NewStorage() *Storage {
 			expiredDictStore: make(map[string]uint64),
 		},
 		sortedSet: make(map[string]*ZSet),
+		cms:       make(map[string]*CMS),
+		bf:        make(map[string]*Bloom),
 	}
 }
 

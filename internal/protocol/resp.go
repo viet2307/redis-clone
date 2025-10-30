@@ -7,15 +7,18 @@ import (
 
 type REPSParser struct{}
 
-func (p *REPSParser) Parse(data []byte) (interface{}, error) {
+func (p *REPSParser) Parse(data []byte) ([]byte, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("empty input")
 	}
 	res, _, err := p.DecodeOne(data, 0)
-	return res, err
+	if err != nil {
+		return []byte("ERR parsing failed"), err
+	}
+	return res, nil
 }
 
-func (p *REPSParser) DecodeOne(data []byte, pos int) (interface{}, int, error) {
+func (p *REPSParser) DecodeOne(data []byte, pos int) ([]byte, int, error) {
 	if pos >= len(data) || pos+1 >= len(data) {
 		return nil, -1, fmt.Errorf("unexpected end of input")
 	}
@@ -30,13 +33,15 @@ func (p *REPSParser) DecodeOne(data []byte, pos int) (interface{}, int, error) {
 		return p.parseArray(data, pos)
 	case '-':
 		return p.parseErr(data, pos)
+	case ',':
+		return p.parseFloat(data, pos)
 	default:
 		return nil, -1, fmt.Errorf("invalid input: %q\nAt pos: %d, parts %s", data, pos, data[pos:])
 	}
 }
 
 // +hello\r\n
-func (p *REPSParser) parseSimpleString(data []byte, pos int) (interface{}, int, error) {
+func (p *REPSParser) parseSimpleString(data []byte, pos int) ([]byte, int, error) {
 	pos++ // skips +
 	start := pos
 	for pos < len(data) && data[pos] != '\r' {
@@ -45,11 +50,11 @@ func (p *REPSParser) parseSimpleString(data []byte, pos int) (interface{}, int, 
 	if pos >= len(data) || pos+1 >= len(data) || data[pos+1] != '\n' {
 		return nil, -1, fmt.Errorf("invalid simple string format")
 	}
-	return string(data[start:pos]), pos + 2, nil
+	return data[start:pos], pos + 2, nil
 }
 
 // $5\r\nhello\r\n
-func (p *REPSParser) parseBulkString(data []byte, pos int) (interface{}, int, error) {
+func (p *REPSParser) parseBulkString(data []byte, pos int) ([]byte, int, error) {
 	pos++
 	start := pos
 	for pos < len(data) && data[pos] != '\r' {
@@ -66,7 +71,7 @@ func (p *REPSParser) parseBulkString(data []byte, pos int) (interface{}, int, er
 	start = pos + 2
 	pos = start
 	if n == 0 {
-		return "", pos + 2, nil
+		return nil, pos + 2, nil
 	}
 
 	if n < 0 || start+int(n) >= len(data) {
@@ -83,11 +88,11 @@ func (p *REPSParser) parseBulkString(data []byte, pos int) (interface{}, int, er
 	if pos >= len(data) || pos+1 >= len(data) || data[pos] != '\r' || data[pos+1] != '\n' {
 		return nil, -1, fmt.Errorf("invalid bulk string format, pos %d, %s", pos, string(data))
 	}
-	return string(data[start:pos]), pos + 2, nil
+	return data[start:pos], pos + 2, nil
 }
 
 // :-100\r\n
-func (p *REPSParser) parseInt(data []byte, pos int) (interface{}, int, error) {
+func (p *REPSParser) parseInt(data []byte, pos int) ([]byte, int, error) {
 	pos++
 	start := pos
 	for pos < len(data) && data[pos] != '\r' {
@@ -96,12 +101,11 @@ func (p *REPSParser) parseInt(data []byte, pos int) (interface{}, int, error) {
 	if pos >= len(data) || pos+1 >= len(data) || data[pos+1] != '\n' {
 		return nil, -1, fmt.Errorf("invalid INT format")
 	}
-	res, _ := strconv.ParseInt(string(data[start:pos]), 10, 64)
-	return res, pos + 2, nil
+	return data[start:pos], pos + 2, nil
 }
 
 // *3\r\n$5\r\nhello\r\n:10\r\n$5\r\nworld\r\n
-func (p *REPSParser) parseArray(data []byte, pos int) (interface{}, int, error) {
+func (p *REPSParser) parseArray(data []byte, pos int) ([]byte, int, error) {
 	pos++
 	start := pos
 	for pos < len(data) && data[pos] != '\r' {
@@ -125,11 +129,11 @@ func (p *REPSParser) parseArray(data []byte, pos int) (interface{}, int, error) 
 		res = append(res, element)
 		n--
 	}
-	return res, pos, nil
+	return data[start:pos], pos, nil
 }
 
 // -Key Not Found\r\n
-func (p *REPSParser) parseErr(data []byte, pos int) (interface{}, int, error) {
+func (p *REPSParser) parseErr(data []byte, pos int) ([]byte, int, error) {
 	pos++
 	start := pos
 	for pos < len(data) && data[pos] != '\r' {
@@ -138,5 +142,19 @@ func (p *REPSParser) parseErr(data []byte, pos int) (interface{}, int, error) {
 	if pos >= len(data) || pos+1 >= len(data) || data[pos+1] != '\n' {
 		return nil, -1, fmt.Errorf("invalid ERR format")
 	}
-	return string(data[start:pos]), pos + 2, nil
+	return data[start:pos], pos + 2, nil
+}
+
+// ,1.23\r\n
+func (p *REPSParser) parseFloat(data []byte, pos int) ([]byte, int, error) {
+	// startPos := pos
+	pos++
+	start := pos
+	for pos < len(data) && data[pos] != '\r' {
+		pos++
+	}
+	if pos >= len(data) || pos+1 >= len(data) || data[pos+1] != '\n' {
+		return nil, -1, fmt.Errorf("invalid FLOAT format")
+	}
+	return data[start:pos], pos + 2, nil
 }

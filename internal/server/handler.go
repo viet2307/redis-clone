@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"strings"
+
+	"tcp-server.com/m/internal/protocol"
 )
 
 type Handler struct {
@@ -44,6 +46,12 @@ func (h *Handler) HandleConnection(s *Server) {
 		if err != nil {
 			fmt.Fprintf(h.conn, "%s", err)
 		}
-		h.conn.Write(s.executor.Execute(cmd))
+		parser := protocol.REPSParser{}
+		res, err := parser.Parse(s.executor.Execute(cmd))
+		if err != nil {
+			fmt.Fprintf(h.conn, "%s", err)
+		}
+		res = append(res, '\r', '\n')
+		h.conn.Write(res)
 	}
 }

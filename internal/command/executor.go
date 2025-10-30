@@ -78,7 +78,7 @@ const (
 	CmdCMSIncrBy = "CMS.INCRBY"
 	CmdCMSQuery  = "CMS.QUERY"
 	CmdBFReverse = "BF.RESERVE"
-	CmdBFMAdd    = "BF.MADD"
+	CmdBFMAdd    = "BF.ADD"
 	CmdBFExist   = "BF.EXISTS"
 	CmdInfo      = "INFO"
 )
